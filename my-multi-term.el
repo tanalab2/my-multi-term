@@ -1,4 +1,4 @@
-;;; multi-term.el --- Managing multiple terminal buffers in Emacs.
+;;; my-multi-term.el --- Managing multiple terminal buffers in Emacs.
 
 ;; Author: Andy Stewart <lazycat.manatee@gmail.com>
 ;; Maintainer: Andy Stewart <lazycat.manatee@gmail.com>
@@ -679,7 +679,10 @@ If option DEDICATED-WINDOW is `non-nil' will create dedicated `multi-term' windo
         (multi-term-switch-internal multi-term-switch-after-close 1))
       ;; Remove killed buffer from the buffer list if it's in there
       (setq multi-term-buffer-list
-            (delq killed-buffer multi-term-buffer-list)))))
+          (delq killed-buffer multi-term-buffer-list)))
+      ;; Delete window if multi-term-buffer-list is empty
+      (unless multi-term-buffer-list
+          (delete-window))))
 
 (defun multi-term-switch (direction offset)
   "Switch `multi-term' buffers.
@@ -798,6 +801,32 @@ Otherwise return nil."
              (= (- window-number dedicated-window-number) 1))
         t nil)))
 
+(defun my-last-term-buffer (l)
+    "Return most recently used term buffer."
+    (when l
+        (if (eq 'term-mode (with-current-buffer (car l) major-mode))
+            (car l) (my-last-term-buffer (cdr l)))))
+
+(defun my-multi-term (arg)
+    "Display or Create term buffer.
+  Will create new term buffer when you type `C-u' before this command."
+    (interactive "P")
+    (let ((term-buffer (my-last-term-buffer (buffer-list))))
+        (cond ((or arg (not term-buffer))
+                  ;; Set buffer.
+                  (setq term-buffer (multi-term-get-buffer))
+                  (setq multi-term-buffer-list (nconc multi-term-buffer-list (list term-buffer)))
+                  (set-buffer term-buffer)
+                  ;; Internal handle for `multi-term' buffer.
+                  (multi-term-internal)))
+        ;; display-bufferに
+        (display-buffer term-buffer)))
+
+(defun my-multi-term-new ()
+    "Create new terminal."
+    (interactive)
+    (my-multi-term t))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Advice ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defadvice delete-other-windows (around multi-term-delete-other-window-advice activate)
   "This is advice to make `multi-term' avoid dedicated window deleted.
@@ -853,7 +882,7 @@ This advice can make `other-window' skip `multi-term' dedicated window."
                (eq multi-term-dedicated-window (selected-window)))
       (other-window count))))
 
-(provide 'multi-term)
+(provide 'my-multi-term)
 
 ;; Local Variables:
 ;; time-stamp-line-limit: 10
